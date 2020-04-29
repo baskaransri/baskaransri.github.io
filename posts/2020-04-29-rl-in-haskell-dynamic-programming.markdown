@@ -20,31 +20,39 @@ _It sounds like the thing someone might shout in a Japanese cartoon. *DYNAMIC PR
 
 Dynamic Programming is breaking up your problems into subproblems, solving those, putting it all together. Like building a house one room at a time. I'll talk through it with the code.
 
-This is an extension to make our code a bit cleaner:
+## Preliminaries
+
+```haskell
 > {-# LANGUAGE RecordWildCards #-}
-
-Name our module:  
 > module ReinforcementLearning.DP where
-
-Don't worry about these imports, I'll explain them when they become relevant.  
+>
 > import qualified Control.Foldl as L  
 > import Data.Map.Strict (Map)  
 > import qualified Data.Map.Strict as Map  
 > import qualified Data.Set as Set  
 > import Data.Maybe (maybe)
+```
 
 We're gonna think about what we mean by a 'game' here. When you're playing Space Invaders,  you don't need to remember how you've played up to this point; everything you need to know (your points, how healthy your barriers are, etc) are on the screen. In Chess, everything is represented by your board state.
 
 This idea of 'everything you need to know is on the board' is called the _Markov Property_, and games which have this property and you need to make decisions at each point are called _Markov Decision Problems_.
 
-Let's define a representation of MDPs with states of type s and rewards of type r.  
+Let's define a representation of MDPs with states of type s and rewards of type r.
+
+```haskell
 > data MDP r s = MDP  
+```
 We want to be able to get out a list of possible states:
+
+```haskell
 >  {  states :: [s],  
+```
 We also want a list of things we can do if we're in a state of type s
+```haskell
 >     actions :: s -> [Action r s],
+```
 And finally we'll scale down future rewards by a 'discount' each time-step as punishment for taking too long.
+```haskell
 >     rewardDiscount :: Double
 >  }
-
-
+```
