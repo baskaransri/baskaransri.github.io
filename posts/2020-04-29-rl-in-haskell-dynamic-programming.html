@@ -35,6 +35,23 @@ It’s the field for any kind of automated goal seeking - like, for example, sel
 <p><em>And Dynamic Programming?</em><br />
 I’m getting there!</p>
 <h1 id="approach-1-dynamic-programming">Approach #1: Dynamic Programming</h1>
+<p><em>It sounds like the thing someone might shout in a Japanese cartoon. <em>DYNAMIC PROGRAMMING!</em></em></p>
+<p>Dynamic Programming is breaking up your problems into subproblems, solving those, putting it all together. Like building a house one room at a time. I’ll talk through it with the code.</p>
+<p>This is an extension to make our code a bit cleaner: &gt; {-# LANGUAGE RecordWildCards #-}</p>
+<p>Name our module:<br />
+&gt; module ReinforcementLearning.DP where</p>
+<p>Don’t worry about these imports, I’ll explain them when they become relevant.<br />
+&gt; import qualified Control.Foldl as L<br />
+&gt; import Data.Map.Strict (Map)<br />
+&gt; import qualified Data.Map.Strict as Map<br />
+&gt; import qualified Data.Set as Set<br />
+&gt; import Data.Maybe (maybe)</p>
+<p>We’re gonna think about what we mean by a ‘game’ here. When you’re playing Space Invaders, you don’t need to remember how you’ve played up to this point; everything you need to know (your points, how healthy your barriers are, etc) are on the screen. In Chess, everything is represented by your board state.</p>
+<p>This idea of ‘everything you need to know is on the board’ is called the <em>Markov Property</em>, and games which have this property and you need to make decisions at each point are called <em>Markov Decision Problems</em>.</p>
+<p>Let’s define a representation of MDPs with states of type s and rewards of type r.<br />
+&gt; data MDP r s = MDP<br />
+We want to be able to get out a list of possible states: &gt; { states :: [s],<br />
+We also want a list of things we can do if we’re in a state of type s &gt; actions :: s -&gt; [Action r s], And finally we’ll scale down future rewards by a ‘discount’ each time-step as punishment for taking too long. &gt; rewardDiscount :: Double &gt; }</p>
 
         </div>
         <div id="footer">
