@@ -16,9 +16,8 @@ I'm getting there!
 
 # Approach #1: Dynamic Programming
 
+Dynamic Programming is breaking up your problems into subproblems, solving those, putting it all together. Like building a house one room at a time. I'll talk through it with the code.  
 _It sounds like the thing someone might shout in a Japanese cartoon. *DYNAMIC PROGRAMMING!*_  
-
-Dynamic Programming is breaking up your problems into subproblems, solving those, putting it all together. Like building a house one room at a time. I'll talk through it with the code.
 
 ## Preliminaries
 
@@ -62,11 +61,16 @@ _Hey, what the hell's this Action business?_
 Perceptive readers might have realised that we sneakily used `Action` without defining it. An action is a valid thing we can do in a state, such as move a pawn forward in chess when there's nothing blocking it. Any outcome it has gives an immediate reward and moves you to a state (which might be the same state you started in, or might be a different one).
 
 ```haskell
-> data ActionResult reward state = ActionResult {_immediateReward :: reward, _targetState :: state} deriving Show
+> data ActionResult reward state 
+>   = ActionResult 
+>       { _immediateReward :: reward, 
+>         _targetState :: state
+>       } 
+>   deriving Show
 ```
 `deriving Show` lets us easily print out an ActionResult.
 
-Consider the action of you flipping a coin and betting 10 quid it comes up heads. Then you have a 50/50 chance of immediately winning 10 quid and the state of the coin being heads or losing 10 quid and the state of the coin being tails. As we can see, and `Action` should be a Distribution of ActionResults. We also add an id so we know what each `Action` is in a list. Here we use a number as an identifier, but we could have used `Text` with minimal changes.
+Consider the action of you flipping a coin and betting 10 quid it comes up heads. Then you have a 50/50 chance of immediately winning 10 quid and the state of the coin being heads or losing 10 quid and the state of the coin being tails. As we can see, and `Action` should be a `Distribution` of `ActionResults`. We also add an id so we know what each `Action` is in a list. Here we use a number as an identifier, but we could have used `Text` with minimal changes.
 
 ```haskell
 > data Action reward state
@@ -91,7 +95,7 @@ A helper function to create a distribution with equal chances of picking anythin
 ```
 Here, `map` applies a function to every element in the list. In this case, the function attaches the probability `1/len` to each of the elements of the list. We need `fromIntegral` because Haskell doesn't automatically convert between number types, and refuses to divide `Int`s to give a `Double`.
 
-We want to be able to do this with `Dist` - to be able to easily apply a function to each of the elements. A thing which can do this is called a `Functor` in Haskell:
+We want to be able to to easily apply a function to each of the elements with `Dist`. A thing which can do this is called a `Functor` in Haskell, so let's make `Dist` a `Functor`:
 ```haskell
 instance Functor (Dist) where
   fmap f (Dist ls) = Dist $ map g ls where g (a,d) = (f a, d)
