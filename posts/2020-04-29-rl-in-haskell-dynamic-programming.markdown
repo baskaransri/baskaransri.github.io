@@ -51,8 +51,51 @@ We also want a list of things we can do if we're in a state of type s
 ```haskell
 >     actions :: s -> [Action r s],
 ```
-And finally we'll scale down future rewards by a 'discount' each time-step as punishment for taking too long.
+And finally we'll scale down future rewards by a 'discount' each time-step as punishment for taking too long. Double is a fraction represented in binary scientific notation to double precision.
 ```haskell
 >     rewardDiscount :: Double
 >  }
 ```
+
+_Hey, what the hell's this Action business?_
+
+Perceptive readers might have realised that we sneakily used `Action` without defining it. An action is a valid thing we can do in a state, such as move a pawn forward in chess when there's nothing blocking it. Any outcome it has gives an immediate reward and moves you to a state (which might be the same state you started in, or might be a different one).
+
+```haskell
+> data ActionResult reward state = ActionResult {_immediateReward :: reward, _targetState :: state} deriving Show
+```
+`deriving Show` lets us easily print out an ActionResult.
+
+Consider the action of you flipping a coin and betting 10 quid it comes up heads. Then you have a 50/50 chance of immediately winning 10 quid and the state of the coin being heads or losing 10 quid and the state of the coin being tails. As we can see, and `Action` should be a Distribution of ActionResults. We also add an id so we know what each `Action` is in a list. Here we use a number as an identifier, but we could have used `Text` with minimal changes.
+
+```haskell
+> data Action reward state
+>   = Action
+>       { _actionId :: Int,
+>         _possibleTransitions :: Dist (ActionResult reward state)
+>       }
+>   deriving Show
+```
+
+A `Dist a` is going to be a list of things of type a, with associated probabilities.
+```haskell
+> type Probability = Double
+> data Dist a = Dist [(a, Probabilty)] deriving Show
+```
+A helper function to create a distribution with equal chances of picking anything from the supplied list:
+```haskell
+> mkUniformDist :: [a] -> Dist a
+> mkUniformDist ls = Dist (map f ls) where
+>   f x = (x, 1/len)
+>   len = fromIntegral (length ls)
+```
+Here, `map` applies a function to every element in the list. In this case, the function attaches the probability `1/len` to each of the elements of the list. We need `fromIntegral` because Haskell doesn't automatically convert between number types, and refuses to divide `Int`s to give a `Double`.
+
+We want to be able to do this with `Dist` - to be able to easily apply a function to each of the elements. A thing which can do this is called a `Functor` in Haskell:
+```haskell
+instance Functor (Dist) where
+  fmap f (Dist ls) = Dist $ map g ls where g (a,d) = (f a, d)
+```
+
+In our previous coin-flip bet, we would have initially had a distribution of outcomes of 
+`coinFlip = Dist [(10, 0.5), (-10, 0.5)]`. Suppose we wanted to double the stakes. Then we could write `fmap (*2) coinFlip`, which would give us `Dist [(20,0.5),(-20,0.5)]`.
