@@ -50,7 +50,7 @@ I’m getting there!</p>
 <p>This idea of ‘everything you need to know is on the board’ is called the <em>Markov Property</em>. Games which have this property where need to make decisions are called <em>Markov Decision Problems</em>.</p>
 <p>Let’s define a representation of MDPs with states of type s and rewards of type r.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1"></a><span class="op">&gt;</span> <span class="kw">data</span> <span class="dt">MDP</span> r s <span class="ot">=</span> <span class="dt">MDP</span>  </span></code></pre></div>
-<p>We want to be able to get out a list of possible states:</p>
+<p>We want to be able to get out a <code>[list]</code> of possible states:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1"></a><span class="op">&gt;</span>  {<span class="ot">  states ::</span> [s],  </span></code></pre></div>
 <p>We also want a list of things we can do if we’re in a state of type s</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1"></a><span class="op">&gt;</span><span class="ot">     actions ::</span> s <span class="ot">-&gt;</span> [<span class="dt">Action</span> r s],</span></code></pre></div>
