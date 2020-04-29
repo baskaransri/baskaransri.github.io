@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>My Hakyll Blog - Reinforcement Learning in Haskell - Dynamic Programming</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">My Hakyll Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <a href="../about.html">About</a>
+                <a href="../contact.html">Contact</a>
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Reinforcement Learning in Haskell - Dynamic Programming</h1>
+
+            <div class="info">
+    Posted on April 29, 2020
+    
+</div>
+
+<h1 id="reinforcement-learning">Reinforcement Learning</h1>
+<p><em>OK, I’ll bite. What’s Reinforcement Learning?</em><br />
+Suppose you wanted to build a program to play a game like Space Invaders, or Chess, or Go. Any game where you pick up rewards along the way (in Space Invaders) or at the end (by winning in Chess), and you want to maximise your score. That’s what Reinforcement Learning is for.</p>
+<p><em>So it’s just for games?</em><br />
+It’s the field for any kind of automated goal seeking - like, for example, self-driving cars.</p>
+<p><em>And Dynamic Programming?</em><br />
+I’m getting there!</p>
+<h1 id="approach-1-dynamic-programming">Approach #1: Dynamic Programming</h1>
+<p>Dynamic Programming is breaking up your problems into subproblems, solving those, putting it all together. Like building a house one room at a time. I’ll talk through it with the code.<br />
+<em>It sounds like the thing someone might shout in a Japanese cartoon. <em>DYNAMIC PROGRAMMING!</em></em></p>
+<h2 id="preliminaries">Preliminaries</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1"></a><span class="op">&gt;</span> <span class="ot">{-# LANGUAGE RecordWildCards #-}</span></span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="op">&gt;</span> <span class="kw">module</span> <span class="dt">ReinforcementLearning.DP</span> <span class="kw">where</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="op">&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="op">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Control.Foldl</span> <span class="kw">as</span> <span class="dt">L</span>  </span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="op">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Map.Strict</span> (<span class="dt">Map</span>)  </span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="op">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Map.Strict</span> <span class="kw">as</span> <span class="dt">Map</span>  </span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="op">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Set</span> <span class="kw">as</span> <span class="dt">Set</span>  </span>
+<span id="cb1-8"><a href="#cb1-8"></a><span class="op">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Maybe</span> (maybe)</span></code></pre></div>
+<p>We’re gonna think about what we mean by a ‘game’ here. When you’re playing Space Invaders, you don’t need to remember how you’ve played up to this point; everything you need to know (your points, how healthy your barriers are, etc) are on the screen. In Chess, everything is represented by your board state.</p>
+<p>This idea of ‘everything you need to know is on the board’ is called the <em>Markov Property</em>, and games which have this property and you need to make decisions at each point are called <em>Markov Decision Problems</em>.</p>
+<p>Let’s define a representation of MDPs with states of type s and rewards of type r.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1"></a><span class="op">&gt;</span> <span class="kw">data</span> <span class="dt">MDP</span> r s <span class="ot">=</span> <span class="dt">MDP</span>  </span></code></pre></div>
+<p>We want to be able to get out a list of possible states:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1"></a><span class="op">&gt;</span>  {<span class="ot">  states ::</span> [s],  </span></code></pre></div>
+<p>We also want a list of things we can do if we’re in a state of type s</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1"></a><span class="op">&gt;</span><span class="ot">     actions ::</span> s <span class="ot">-&gt;</span> [<span class="dt">Action</span> r s],</span></code></pre></div>
+<p>And finally we’ll scale down future rewards by a ‘discount’ each time-step as punishment for taking too long. Double is a fraction represented in binary scientific notation to double precision.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1"></a><span class="op">&gt;</span><span class="ot">     rewardDiscount ::</span> <span class="dt">Double</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="op">&gt;</span>  }</span></code></pre></div>
+<p><em>Hey, what the hell’s this Action business?</em></p>
+<p>Perceptive readers might have realised that we sneakily used <code>Action</code> without defining it. An action is a valid thing we can do in a state, such as move a pawn forward in chess when there’s nothing blocking it. Any outcome it has gives an immediate reward and moves you to a state (which might be the same state you started in, or might be a different one).</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1"></a><span class="op">&gt;</span> <span class="kw">data</span> <span class="dt">ActionResult</span> reward state </span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="op">&gt;</span>   <span class="ot">=</span> <span class="dt">ActionResult</span> </span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="op">&gt;</span>       {<span class="ot"> _immediateReward ::</span> reward, </span>
+<span id="cb6-4"><a href="#cb6-4"></a><span class="op">&gt;</span><span class="ot">         _targetState ::</span> state</span>
+<span id="cb6-5"><a href="#cb6-5"></a><span class="op">&gt;</span>       } </span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="op">&gt;</span>   <span class="kw">deriving</span> <span class="dt">Show</span></span></code></pre></div>
+<p><code>deriving Show</code> lets us easily print out an ActionResult.</p>
+<p>Consider the action of you flipping a coin and betting 10 quid it comes up heads. Then you have a 50/50 chance of immediately winning 10 quid and the state of the coin being heads or losing 10 quid and the state of the coin being tails. As we can see, and <code>Action</code> should be a <code>Distribution</code> of <code>ActionResults</code>. We also add an id so we know what each <code>Action</code> is in a list. Here we use a number as an identifier, but we could have used <code>Text</code> with minimal changes.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1"></a><span class="op">&gt;</span> <span class="kw">data</span> <span class="dt">Action</span> reward state</span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="op">&gt;</span>   <span class="ot">=</span> <span class="dt">Action</span></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="op">&gt;</span>       {<span class="ot"> _actionId ::</span> <span class="dt">Int</span>,</span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="op">&gt;</span><span class="ot">         _possibleTransitions ::</span> <span class="dt">Dist</span> (<span class="dt">ActionResult</span> reward state)</span>
+<span id="cb7-5"><a href="#cb7-5"></a><span class="op">&gt;</span>       }</span>
+<span id="cb7-6"><a href="#cb7-6"></a><span class="op">&gt;</span>   <span class="kw">deriving</span> <span class="dt">Show</span></span></code></pre></div>
+<p>A <code>Dist a</code> is going to be a list of things of type a, with associated probabilities.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1"></a><span class="op">&gt;</span> <span class="kw">type</span> <span class="dt">Probability</span> <span class="ot">=</span> <span class="dt">Double</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="op">&gt;</span> <span class="kw">data</span> <span class="dt">Dist</span> a <span class="ot">=</span> <span class="dt">Dist</span> [(a, <span class="dt">Probabilty</span>)] <span class="kw">deriving</span> <span class="dt">Show</span></span></code></pre></div>
+<p>A helper function to create a distribution with equal chances of picking anything from the supplied list:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1"></a><span class="op">&gt;</span><span class="ot"> mkUniformDist ::</span> [a] <span class="ot">-&gt;</span> <span class="dt">Dist</span> a</span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="op">&gt;</span> mkUniformDist ls <span class="ot">=</span> <span class="dt">Dist</span> (<span class="fu">map</span> f ls) <span class="kw">where</span></span>
+<span id="cb9-3"><a href="#cb9-3"></a><span class="op">&gt;</span>   f x <span class="ot">=</span> (x, <span class="dv">1</span><span class="op">/</span>len)</span>
+<span id="cb9-4"><a href="#cb9-4"></a><span class="op">&gt;</span>   len <span class="ot">=</span> <span class="fu">fromIntegral</span> (<span class="fu">length</span> ls)</span></code></pre></div>
+<p>Here, <code>map</code> applies a function to every element in the list. In this case, the function attaches the probability <code>1/len</code> to each of the elements of the list. We need <code>fromIntegral</code> because Haskell doesn’t automatically convert between number types, and refuses to divide <code>Int</code>s to give a <code>Double</code>.</p>
+<p>We want to be able to to easily apply a function to each of the elements with <code>Dist</code>. A thing which can do this is called a <code>Functor</code> in Haskell, so let’s make <code>Dist</code> a <code>Functor</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1"></a><span class="kw">instance</span> <span class="dt">Functor</span> (<span class="dt">Dist</span>) <span class="kw">where</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a>  <span class="fu">fmap</span> f (<span class="dt">Dist</span> ls) <span class="ot">=</span> <span class="dt">Dist</span> <span class="op">$</span> <span class="fu">map</span> g ls <span class="kw">where</span> g (a,d) <span class="ot">=</span> (f a, d)</span></code></pre></div>
+<p>In our previous coin-flip bet, we would have initially had a distribution of outcomes of <code>coinFlip = Dist [(10, 0.5), (-10, 0.5)]</code>. Suppose we wanted to double the stakes. Then we could write <code>fmap (*2) coinFlip</code>, which would give us <code>Dist [(20,0.5),(-20,0.5)]</code>.</p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
